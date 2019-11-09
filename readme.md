@@ -3,7 +3,7 @@ This is my portfolio and a place to document my learning journey
 
 #Current Projects
 
-OSCP Prep
+eLearnsecurity's PTPv5 course - Preparation for eCPPTv2
     
     Wireshark
     Linux/Bash
@@ -17,3 +17,5 @@ CCNP
     SCOR
 
 Github Portfolio/Practice
+    Website
+    Social Media (LinkedIn, Twitter, Instagram)
