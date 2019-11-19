@@ -12,6 +12,12 @@
 
     ping -c 1 192.168.1.1 | grep "64 bytes from" | cut -d " " -f 4 | sed 's/.$//'
 
+#For loop - don't forget to add "; done" at the end so we don't run into '>' prompt issue
+#below for loop: pings 1-255 hosts in 192.168.1.0/24; grep prints the matching lines "64 bytes from"; cut - remove sections from each #line of files usign "-d". --delimiter=DELIM - use delimiter instead of TAB for field delimiter. (in this case a space " ")
+#finally sed - stream editor for filtering and transforming text helps us (more research needed on 's/.$//')
+
+    for i in {1..255}; do ping -c 1 192.168.1.$i | grep "64 bytes from" | cut -d " " -f 4 | sed 's/.$//'; done
+
 #save test results to a file 
 
     ping -c 1 192.168.1.1 > ping.txt 
