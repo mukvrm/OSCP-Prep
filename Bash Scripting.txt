@@ -25,6 +25,7 @@
 #My traceroute and PING test
 
     sudo mtr -r -c 5 192.168.1.1 && sudo mtr -r -c 5 192.168.1.18 && for i in {1..254}; do ping -c 5 192.168.1.$i | grep '1'; done
+
 #For loop with mtr - For i in range 160-190 runs a mytraceroute to specified #X.X.X.$i IP address (no DNS resolution flag); greps prints #the lines that #contain a "." (such as #ones with dotted decimal IP addresses); cut -d uses #space as delimiter ; done completes the #loop. Useful for checking routing path in a whole subnet
 
     for i in {160..190}; do sudo mtr -r -c 5 100.65.150.$i --no-dns | grep "." | cut -d " " -f 4; done
