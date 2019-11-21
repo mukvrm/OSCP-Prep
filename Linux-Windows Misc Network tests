@@ -6,7 +6,7 @@
     tcp.port == 8080
 
 #Wireshark filter IP packets by IP protocol number. 
-    #Sheet with IP Protocol Numbers: https://docs.google.com/spreadsheets/d/1Fmfp1m3ji9fUPdNEfT75FvOXl4OnAUJ25wqMPoAOX9I/edit?usp=sharing
+    #Sheet with IP Protocol Numbers: https://www.iana.org/assignments/protocol-numbers/protocol-numbers.xhtml
     
     ip.proto == ()
 
