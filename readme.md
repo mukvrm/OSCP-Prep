@@ -32,7 +32,7 @@ Projects
                     2821 IOS 15.x
                     2821 IOS 15.x
                 
-                Switche(s)
+                Switch(es)
                 
                     3750 IOS 15.x
                     3750 IOS 15.x
