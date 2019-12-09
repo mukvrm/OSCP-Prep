@@ -4,23 +4,36 @@ Projects
     
     Home Lab    
         
-        Hypervisor - ESXi 6.7
+        Hypervisor - ESXi 6.7 | (32GB memory 2.5Tb 3 datastores and 3.9 GHz i7-4770 8mb Cache)
         
-        Pentesting VM - Kali | (ESXi)
+        Kali - Pentesting VM | (ESXi)
         
-        Windows XP Professional VM - Overflow research 
+        Windows 10 - Overflow research on ASLR, DEP environments| (ESXi)
 
-        Network
+        Windows XP Professional VM - Overflow research | (ESXi) 
+
+        Network (Draw.io)
         
+            Layer 3 Protocols - OSPF, EIGRP 
+            Layer 2 Protocols - STP, PVST, MST, DTP, VTP, VLAN 802.1Q, Ethernet Port-Channel (PAgP, LACP)
+            Other protocols - DHCP, NAT, HSRP
+            Network security - ACL
+            Remote Management - FTP, SSH, VNC, SNMP
+            Security - Policy Based IPSec VPN, Route Based IPSec VPN
+
+
             Virtualized Environment - EVEng | (ESXi)
         
-            Physical
+            Physical devices
                 
                 Router(s)
+                
                     2821 IOS 15.x
                     2821 IOS 15.x
                     2821 IOS 15.x
+                
                 Switche(s)
+                
                     3750 IOS 15.x
                     3750 IOS 15.x
                     3560 PoE 48 12.x
