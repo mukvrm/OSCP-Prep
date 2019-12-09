@@ -78,7 +78,3 @@ Academics
             d) SESA - https://learningnetwork.cisco.com/community/certifications/ccnp-security/sesa/exam-topics
                 
             e) SAUTO - https://learningnetwork.cisco.com/community/certifications/ccnp-security/sauto/exam-topics
-
-    CCNA Routing and Switching | 2019
-
-    CCENT | 2018
