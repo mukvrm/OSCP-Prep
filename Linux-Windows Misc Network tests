@@ -27,7 +27,7 @@
 
     1..99 | % { Test-NetConnection -ComputerName x.x.x.$_ } | FT -AutoSize
 
-i.e '1..99 | % { Test-NetConnection -ComputerName 167.3.139.$_ } | FT -AutoSize'
+i.e '1..99 | % { Test-NetConnection -ComputerName 192.168.1.$_ } | FT -AutoSize'
 
 ##Powershell###Tracert with PowerShell
 
@@ -198,7 +198,7 @@ netstat -rn && sudo vi /etc/sysconfig/network-scripts/route-eth1
 
 #Testing - PING host(s) within subnet 
     
-    for i in {1..254}; do ping -c 1 172.17.254.$i | grep '1'; done
+    for i in {1..254}; do ping -c 1 192.17.254.$i | grep '1'; done
 
 ###Ping sweep and output only live hosts
 
