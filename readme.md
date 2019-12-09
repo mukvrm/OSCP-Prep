@@ -12,7 +12,7 @@ Projects
 
         Windows XP Professional VM - Overflow research | (ESXi) 
 
-        Network (Draw.io)
+        Network (TBD Diagram - maybe Draw.io)
         
             Layer 3 Protocols - OSPF, EIGRP 
             Layer 2 Protocols - STP, PVST, MST, DTP, VTP, VLAN 802.1Q, Ethernet Port-Channel (PAgP, LACP)
