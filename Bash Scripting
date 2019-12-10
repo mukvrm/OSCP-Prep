@@ -50,7 +50,7 @@ Explanation of command + arguments
 
 
 But... How to save test results to a file?
-    Add > after command
+    Add > after command followed by the filename (thanks to @nin)
 
     ping -c 1 192.168.1.1 > ping.txt 
 
