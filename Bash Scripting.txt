@@ -1,4 +1,4 @@
-# Basic examples of Bash Scripting
+Basic examples of Bash Scripting
 
 Goal
     Ping Sweep a range, generate a list of hosts that Echo reply
