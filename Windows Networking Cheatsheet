@@ -12,6 +12,7 @@ Displays all connections and listening ports '-a' and...
 Displays addresses and port numbers in numerical form '-n' and...
 Displays TCP connection template for all connections '-y' (table style - Proto - Local Address - Foreign Address - State - Template)
 find or findstr to filter output   
+
     netstat –yan | find “8080” 
     netstat –yan | findstr “22” 
 
