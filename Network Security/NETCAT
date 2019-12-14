@@ -1,5 +1,6 @@
 NETCAT
-    To establish connections on open ports and create listening ports on local machine
+
+    What is it? - To establish connections on open ports and create listening ports on local machine
 
 WHY? - Exploit development - Neccessary to determine HOW TO CONNECT TO A MACHINE ONCE AN EXPLOIT IS SENT AND WHAT TYPE OF SHELL IS GOING TO BE USED. PRIMARILY NETCAT FOR THIS COURSE TO CONNECT TO A MACHINE AND HAVE IT CONNECT TO US.
 
