@@ -10,6 +10,6 @@ What is it? Port scanning, network discovery
 -p- Full range of ports if you don't put - after -p it will scan only standard well known ports
 -oA save all to xml file, -oN gives you nmap file; /path/to/file
 
-    nmap -vv -Pn -A -sS -T4 -p- -oA/N /winnie/Desktop/tcpscan.txt 192.168.2.2
+    nmap -vv -Pn -A -sS -T4 -p- -oA/N /winnie/Desktop/tcpscan.txt 172.24.14.90
 
     
