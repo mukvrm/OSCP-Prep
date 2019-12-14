@@ -1,0 +1,21 @@
+End to End Cloud Network Troubleshooting - Cheatsheet to troubleshoot connectivity issues to a resource in the interwebs
+
+    1.0 Determine "Client to Cloud connection issue - VPN/MPLS/SSL or Public WAN" or "Cloud Issue - Within Data center or Between Data Centers"
+    2.1 Client to Cloud connection issue - VPN/MPLS/SSL
+        A: Customer ping/traceroute to Cloud Server
+        B: Cloud Server ping/traceroute to source
+        C: Check VPN status
+        D: Check routing table/firewall/iptables on the server
+    2.2 Customer related issue - Public WAN
+        A: Check if DNS is correct
+        B: Check Firewall to see if the traffic is allowed
+    3.1 Cloud Issue - Within Data center or Between Data Centers
+        A: Ping/tracert between problem servers
+        B: Ping/tracert between similar servers (same VLAN)
+        C: Check iptables on the servers
+        D: Check policies on the firewall
+    3.2 Cloud Issue - Between Data Centers
+        A: Ping/tracert between problem servers
+        B: Ping/tracert between similar servers (different VLAN/Subnet)
+        C: Check routing tables on the server
+        D: Check policies on the firewalls connecting Datacenters/Cloud
