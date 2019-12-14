@@ -1,4 +1,5 @@
-NMAP - Port scanning, network discovery
+NMAP
+What is it? Port scanning, network discovery
 
 -vv for verbosity
 -Pn treats hosts as UP
