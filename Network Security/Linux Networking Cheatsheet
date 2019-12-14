@@ -26,7 +26,7 @@ Check Printer
     telnet XX.XX.XX.XX 9100/515
     lpstat –s | grep XX.XX.XX.XX
 
-TCP Dump
+tcpdump
     UAP RSF - [ Hint: An anagram for the TCP flags: Unskilled Attackers Pester Real Security Folk ]
 
 Show me all URGENT (URG) packets...
