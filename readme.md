@@ -4,11 +4,13 @@ Projects
     
     Home Lab    
         
-        Hypervisor - ESXi 6.7 | (32GB memory 2.5Tb 3 datastores and 3.9 GHz i7-4770 8mb Cache)
+        Hypervisor Type 1 - ESXi 6.7 | (32GB memory 2.5Tb 3 datastores and 3.9 GHz i7-4770 8mb Cache)
         
         Kali - Pentesting VM | (ESXi)
         
-        Windows 10 - Overflow research on ASLR, DEP environments| (ESXi)
+        Windows 10 - Overflow research on ASLR, DEP environments | (ESXi)
+
+        Windows 8 - Overflow research on ASLR, DEP environments | (ESXi)
 
         Windows XP Professional VM - Overflow research | (ESXi) 
 
