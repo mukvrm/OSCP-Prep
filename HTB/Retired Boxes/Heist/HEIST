@@ -417,7 +417,7 @@ host          origin        service        public  private        realm  private
                                     Done:
                                     1. Restricted access for guest user.
                                     *Evil-WinRM* PS C:\Users\Chase\Desktop> gc user.txt
-                                    a127daef77ab6d9d92008653295f59c4
+                                    a127daef77GOFIGUREITOUT295f59c4
                             Note: access to other folders is restricted. Enumeration on web server is next 
                             cd C:\ gci ; cd inetpub (webserver folder) - since we cannot list the files in the wwwroot directory
                             browsing to http://10.10.10.149/issues.php suggests to cat the contents of that file (issues.php)
