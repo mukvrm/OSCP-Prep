@@ -6,7 +6,7 @@
 
 import socket
 
-#Takes input from the user and saves it in variables SRV_ADDR and SRV_PORT
+# Takes input from the user and saves it in variables SRV_ADDR and SRV_PORT
 
 SRV_ADDR = input("Type the server IP address: ")
 SRV_PORT = int(input("Type the server port: "))
